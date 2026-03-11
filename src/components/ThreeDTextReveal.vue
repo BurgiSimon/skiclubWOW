@@ -18,7 +18,7 @@ const props = defineProps({
   scrubSmoothing: { type: Number, default: 1 },
   fontSize: { type: String, default: 'clamp(3rem, 9vw, 7rem)' },
   fontWeight: { type: Number, default: 900 },
-  gap: { type: Number, default: 15 }
+  gap: { type: Number, default: 15 },
 })
 
 const wrapperRef = ref(null)
@@ -50,7 +50,7 @@ function updatePositions() {
       rotateX: rotation,
       xPercent: -50,
       yPercent: -50,
-      transformOrigin: '50% 50%'
+      transformOrigin: '50% 50%',
     })
   })
 }
@@ -72,7 +72,7 @@ onMounted(() => {
     pin: true,
     scrub: props.scrubSmoothing,
     anticipatePin: 1,
-    invalidateOnRefresh: true
+    invalidateOnRefresh: true,
   }
 
   if (scroller) {
@@ -84,7 +84,7 @@ onMounted(() => {
   timeline.fromTo(
     containerRef.value,
     { rotateX: props.startRotation },
-    { rotateX: props.endRotation, ease: 'none' }
+    { rotateX: props.endRotation, ease: 'none' },
   )
 })
 
@@ -105,8 +105,10 @@ onUnmounted(() => {
     :class="['text-reveal-3d-wrapper', className]"
     :style="{
       perspective: `${perspective}px`,
-      maskImage: 'linear-gradient(to bottom, transparent 0%, black 20%, black 80%, transparent 100%)',
-      WebkitMaskImage: 'linear-gradient(to bottom, transparent 0%, black 20%, black 80%, transparent 100%)'
+      maskImage:
+        'linear-gradient(to bottom, transparent 0%, black 20%, black 80%, transparent 100%)',
+      WebkitMaskImage:
+        'linear-gradient(to bottom, transparent 0%, black 20%, black 80%, transparent 100%)',
     }"
   >
     <div ref="containerRef" class="text-reveal-3d-container">

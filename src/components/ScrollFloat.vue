@@ -14,7 +14,7 @@ const props = defineProps({
   ease: { type: String, default: 'back.inOut(2)' },
   scrollStart: { type: String, default: 'center bottom+=50%' },
   scrollEnd: { type: String, default: 'bottom bottom-=40%' },
-  stagger: { type: Number, default: 0.03 }
+  stagger: { type: Number, default: 0.03 },
 })
 
 const slots = useSlots()
@@ -53,7 +53,7 @@ onMounted(() => {
       yPercent: 120,
       scaleY: 2.3,
       scaleX: 0.7,
-      transformOrigin: '50% 0%'
+      transformOrigin: '50% 0%',
     },
     {
       duration: props.animationDuration,
@@ -68,9 +68,9 @@ onMounted(() => {
         scroller,
         start: props.scrollStart,
         end: props.scrollEnd,
-        scrub: true
-      }
-    }
+        scrub: true,
+      },
+    },
   )
 
   triggers = ScrollTrigger.getAll().filter((t) => t.trigger === el)

@@ -9,7 +9,7 @@ import {
   Mesh,
   Vector2,
   Vector3,
-  Color
+  Color,
 } from 'three'
 import './PixelSnow.css'
 
@@ -172,7 +172,7 @@ const props = defineProps({
   density: { type: Number, default: 0.3 },
   variant: { type: String, default: 'square' },
   direction: { type: Number, default: 125 },
-  className: { type: String, default: '' }
+  className: { type: String, default: '' },
 })
 
 const containerRef = ref(null)
@@ -219,7 +219,7 @@ watch(
     props.density,
     variantValue.value,
     props.direction,
-    colorVector.value
+    colorVector.value,
   ],
   () => {
     if (!material) return
@@ -235,7 +235,7 @@ watch(
     material.uniforms.uVariant.value = variantValue.value
     material.uniforms.uDirection.value = (props.direction * Math.PI) / 180
     material.uniforms.uColor.value.copy(colorVector.value)
-  }
+  },
 )
 
 onMounted(() => {
@@ -247,7 +247,7 @@ onMounted(() => {
     ([entry]) => {
       isVisible = entry.isIntersecting
     },
-    { threshold: 0 }
+    { threshold: 0 },
   )
   observer.observe(container)
 
@@ -260,7 +260,7 @@ onMounted(() => {
     premultipliedAlpha: false,
     powerPreference: 'high-performance',
     stencil: false,
-    depth: false
+    depth: false,
   })
 
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
@@ -285,9 +285,9 @@ onMounted(() => {
       uGamma: { value: props.gamma },
       uDensity: { value: props.density },
       uVariant: { value: variantValue.value },
-      uDirection: { value: (props.direction * Math.PI) / 180 }
+      uDirection: { value: (props.direction * Math.PI) / 180 },
     },
-    transparent: true
+    transparent: true,
   })
 
   geometry = new PlaneGeometry(2, 2)

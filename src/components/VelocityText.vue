@@ -11,12 +11,12 @@ const props = defineProps({
   numCopies: { type: Number, default: 6 },
   velocityMapping: {
     type: Object,
-    default: () => ({ input: [0, 1000], output: [0, 5] })
+    default: () => ({ input: [0, 1000], output: [0, 5] }),
   },
   parallaxClassName: { type: String, default: 'parallax' },
   scrollerClassName: { type: String, default: 'scroller' },
   parallaxStyle: { type: Object, default: () => ({}) },
-  scrollerStyle: { type: Object, default: () => ({}) }
+  scrollerStyle: { type: Object, default: () => ({}) },
 })
 
 const scrollerRef = ref(null)
@@ -48,8 +48,7 @@ function handleScroll() {
   const now = performance.now()
   const dt = now - lastTime
   if (dt > 0) {
-    const container =
-      props.scrollContainerRef?.value ?? null
+    const container = props.scrollContainerRef?.value ?? null
     const currentScrollY = container ? container.scrollTop : window.scrollY
     scrollVelocity = ((currentScrollY - lastScrollY) / dt) * 1000
     lastScrollY = currentScrollY

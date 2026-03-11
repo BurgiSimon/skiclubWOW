@@ -15,7 +15,7 @@ const props = defineProps({
   containerClassName: { type: String, default: '' },
   textClassName: { type: String, default: '' },
   rotationEnd: { type: String, default: 'bottom bottom' },
-  wordAnimationEnd: { type: String, default: 'bottom bottom' }
+  wordAnimationEnd: { type: String, default: 'bottom bottom' },
 })
 
 const slots = useSlots()
@@ -35,7 +35,7 @@ const words = computed(() => {
   return text.split(/(\s+)/).map((segment, index) => ({
     text: segment,
     isSpace: /^\s+$/.test(segment),
-    key: index
+    key: index,
   }))
 })
 
@@ -59,9 +59,9 @@ onMounted(() => {
         scroller,
         start: 'top bottom',
         end: props.rotationEnd,
-        scrub: true
-      }
-    }
+        scrub: true,
+      },
+    },
   )
 
   const wordElements = el.querySelectorAll('.word')
@@ -78,9 +78,9 @@ onMounted(() => {
         scroller,
         start: 'top bottom-=20%',
         end: props.wordAnimationEnd,
-        scrub: true
-      }
-    }
+        scrub: true,
+      },
+    },
   )
 
   if (props.enableBlur) {
@@ -96,9 +96,9 @@ onMounted(() => {
           scroller,
           start: 'top bottom-=20%',
           end: props.wordAnimationEnd,
-          scrub: true
-        }
-      }
+          scrub: true,
+        },
+      },
     )
   }
 

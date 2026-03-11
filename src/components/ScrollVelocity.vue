@@ -12,12 +12,12 @@ const props = defineProps({
   numCopies: { type: Number, default: 6 },
   velocityMapping: {
     type: Object,
-    default: () => ({ input: [0, 1000], output: [0, 5] })
+    default: () => ({ input: [0, 1000], output: [0, 5] }),
   },
   parallaxClassName: { type: String, default: 'parallax' },
   scrollerClassName: { type: String, default: 'scroller' },
   parallaxStyle: { type: Object, default: () => ({}) },
-  scrollerStyle: { type: Object, default: () => ({}) }
+  scrollerStyle: { type: Object, default: () => ({}) },
 })
 </script>
 
