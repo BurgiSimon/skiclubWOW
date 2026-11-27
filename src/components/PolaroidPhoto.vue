@@ -2,8 +2,9 @@
 import ResponsiveImage from './ResponsiveImage.vue'
 
 defineProps({
-  image: { type: Object, required: true },
-  alt: { type: String, required: true },
+  /** Photo as returned by photo() – or leave it out and fill the #media slot (e.g. a video) */
+  image: { type: Object, default: null },
+  alt: { type: String, default: '' },
   caption: { type: String, default: '' },
   rotate: { type: Number, default: -3 },
   sizes: { type: String, default: '(min-width: 1024px) 420px, 80vw' },
@@ -17,13 +18,16 @@ defineProps({
 <template>
   <figure class="polaroid" :style="{ '--rot': `${rotate}deg` }">
     <div class="polaroid__photo" :style="{ aspectRatio: ratio }">
-      <ResponsiveImage
-        :image="image"
-        :alt="alt"
-        :sizes="sizes"
-        :position="position"
-        :loading="loading"
-      />
+      <slot name="media">
+        <ResponsiveImage
+          v-if="image"
+          :image="image"
+          :alt="alt"
+          :sizes="sizes"
+          :position="position"
+          :loading="loading"
+        />
+      </slot>
     </div>
     <figcaption v-if="caption || $slots.caption" class="polaroid__caption hand">
       <slot name="caption">{{ caption }}</slot>

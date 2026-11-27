@@ -1,6 +1,8 @@
 <script setup>
 import { computed, ref } from 'vue'
+import AppIcon from '@/components/AppIcon.vue'
 import ResponsiveImage from '@/components/ResponsiveImage.vue'
+import { club, instagramUrl } from '@/data/club.js'
 import { gallery, GALLERY_FILTERS } from '@/data/photos.js'
 import { useLightbox } from '@/composables/useUi.js'
 
@@ -59,6 +61,18 @@ function count(id) {
           </button>
         </li>
       </ul>
+
+      <div v-if="instagramUrl" v-reveal class="gallery__more">
+        <p class="gallery__more-text">
+          <span class="hand">Das war längst nicht alles.</span>
+          Die neusten Fotos, Flyer und Geschichten gibt's auf Instagram.
+        </p>
+        <a class="btn btn--light" :href="instagramUrl" target="_blank" rel="noopener">
+          <AppIcon name="instagram" />
+          @{{ club.contact.instagram }}
+          <span class="visually-hidden">(öffnet in neuem Tab)</span>
+        </a>
+      </div>
     </div>
   </section>
 </template>
@@ -174,6 +188,32 @@ function count(id) {
 .gallery__btn:focus-visible .gallery__caption {
   opacity: 1;
   transform: none;
+}
+
+.gallery__more {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.25rem 2rem;
+  margin-top: clamp(2rem, 4vw, 3rem);
+  padding: clamp(1.4rem, 3vw, 2rem) clamp(1.4rem, 3vw, 2.25rem);
+  border: 1px solid rgb(255 255 255 / 0.12);
+  border-radius: var(--radius-lg);
+  background:
+    radial-gradient(120% 140% at 100% 0%, rgb(213 43 30 / 0.28), transparent 55%), var(--c-ink-2);
+}
+
+.gallery__more-text {
+  display: grid;
+  gap: 0.2rem;
+  max-width: 36rem;
+  color: var(--c-muted-on-dark);
+}
+
+.gallery__more-text .hand {
+  font-size: 2rem;
+  color: #fff;
 }
 
 @media (hover: none) {

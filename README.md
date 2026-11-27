@@ -14,7 +14,7 @@ Built with Vue 3 + Vite + Bun, deployed to GitHub Pages.
 | **Hero** | Pixel snow, «Mir fahre Ski. *meischtens.*», next event with live countdown, a polaroid of six guys pointing at the headline (click it for a new caption) |
 | **Bande** | A marquee styled like our banner at the sports ground – speeds up while you scroll |
 | **01 Wer mir sind** | Who we are, stats (incl. *0 ski lifts in Kestenholz*), our four «disciplines» |
-| **02 Heimspiel** | «Kei Lift? Kei Problem.» – the powder day in Kestenholz (Jan 2026), with both video clips |
+| **02 Heimspiel** | «Kei Lift? Kei Problem.» – the powder day in Kestenholz (Jan 2026) with three clips, incl. the «Halber Skilift» (riding up in the open trunk) next to a lift info board |
 | **03 Gründer** | The founders' photo with hand-drawn annotations, 8 → 18 members («Platz 19 isch no frei»), chronicle |
 | **04 Agenda** | Every event as a ski pass, rated by piste colour (blue/red/black/yellow), filters, `.ics` calendar export, share button |
 | **05 Galerie** | Photo gallery with filters and lightbox (keyboard + swipe) |
@@ -41,18 +41,22 @@ All texts and dates live in three small files – no component code needs to cha
 
 | File | What |
 | --- | --- |
-| `src/data/club.js` | Club facts (members, founded …), **contact e-mail / Instagram**, chronicle, polaroid captions |
+| `src/data/club.js` | Club facts (members, founded …), **contact e-mail / Instagram** (`skiclub_kestenholz`), chronicle, polaroid captions |
 | `src/data/events.js` | The agenda. Dates are `YYYY-MM-DD`; past events get an «Entwertet» stamp automatically and the hero always shows the next one |
 | `src/data/photos.js` | The gallery (file, category, alt text, caption) |
 
-**Contact:** as long as `contact.email` is empty, the «Mitmachen» buttons point to the agenda
-(«talk to us at the next event»). Add the club address there and they become `mailto:` links.
+**Contact:** the «Mitmachen» buttons use the first channel that is set in `contact`: e-mail
+(`mailto:` with a prefilled subject), then Instagram (opens the profile for a DM), otherwise the
+agenda («talk to us at the next event»). The Instagram handle also drives the header icon, the
+mobile menu, the «more on Instagram» box below the gallery and the footer.
 
 **Adding a photo:** put the `.jpg` into `src/assets/photos/` and add an entry to `gallery` in
 `src/data/photos.js`. At build time [vite-imagetools](https://github.com/JonasKruckenberg/imagetools)
 creates AVIF/WebP versions in four sizes plus a blurred placeholder, and strips EXIF/GPS data.
 
 **Videos** live in `src/assets/media/` (MP4/H.264 + WebM/VP9 fallback, muted, without metadata).
+In `halber-skilift.mp4` the car's licence plate is blurred frame by frame – keep it that way if
+the clip is ever re-cut from the original.
 They were cut from the original clips with ffmpeg, e.g.:
 
 ```sh

@@ -11,11 +11,15 @@ export const club = {
   season: '2026/27',
 
   contact: {
-    // Leave empty until the club has an address – buttons then point to the agenda instead.
+    // Optional. If set, the «Mitmachen» buttons become mailto: links; otherwise they go to Instagram.
     email: '',
-    instagram: '',
+    instagram: 'skiclub_kestenholz',
   },
 }
+
+export const instagramUrl = club.contact.instagram
+  ? `https://www.instagram.com/${club.contact.instagram}/`
+  : ''
 
 export const navLinks = [
   { id: 'ueber-uns', label: 'Über uns' },
@@ -29,7 +33,10 @@ export const navLinks = [
 export const chronicle = [
   { year: '2023', text: 'Acht Kollegen gründen den Skiclub Kestenholz.' },
   { year: '2025', text: 'Season End Party am Karfreitag im Schlachthaus.' },
-  { year: 'Jan. 2026', text: 'Neuschnee in Chestehouz: Schanze geschaufelt, Wiese befahren.' },
+  {
+    year: 'Jan. 2026',
+    text: 'Neuschnee in Chestehouz: Schanze geschaufelt, halber Skilift eröffnet.',
+  },
   { year: '2026', text: '3. GV im Pöstli, Kappel – alle einstimmig wiedergewählt. Bravo!' },
   { year: '2027', text: 'Premiere: der erste öffentliche Chestehouzer Skitag.' },
 ]
@@ -44,10 +51,20 @@ export const pointingCaptions = [
 ]
 
 /**
- * Builds a mailto link if the club has an e-mail address, otherwise falls back to the agenda
- * (the honest answer for now: "talk to us at the next event").
+ * Where a contact button leads: e-mail if the club has an address, otherwise an Instagram DM
+ * via the profile, otherwise the agenda ("talk to us at the next event").
+ * Returns `{ href, kind, attrs }` – spread `attrs` onto the <a> (new tab for Instagram).
  */
-export function contactHref(subject) {
-  if (!club.contact.email) return '#agenda'
-  return `mailto:${club.contact.email}?subject=${encodeURIComponent(subject)}`
+export function contactLink(subject) {
+  if (club.contact.email) {
+    return {
+      href: `mailto:${club.contact.email}?subject=${encodeURIComponent(subject)}`,
+      kind: 'mail',
+      attrs: {},
+    }
+  }
+  if (instagramUrl) {
+    return { href: instagramUrl, kind: 'instagram', attrs: { target: '_blank', rel: 'noopener' } }
+  }
+  return { href: '#agenda', kind: 'agenda', attrs: {} }
 }
