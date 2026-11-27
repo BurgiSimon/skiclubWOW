@@ -38,6 +38,8 @@ const ICONS = {
   star: 'M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z',
   beanie:
     'M5 15.5a7 7 0 0 1 14 0zM4 15.5h16V19H4zM12 6.2a1.6 1.6 0 1 0 0-3.2 1.6 1.6 0 0 0 0 3.2zM9 15.5v3.5M12 15.5v3.5M15 15.5v3.5',
+  // T-bar lift: cable, rope box, pole and bar
+  lift: 'M2 4.5l20 4M10.5 5.6h3v3h-3zM12 8.6V17M7.5 17h9',
 }
 
 const FILLED = {

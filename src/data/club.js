@@ -33,7 +33,10 @@ export const navLinks = [
 export const chronicle = [
   { year: '2023', text: 'Acht Kollegen gründen den Skiclub Kestenholz.' },
   { year: '2025', text: 'Season End Party am Karfreitag im Schlachthaus.' },
-  { year: 'Jan. 2026', text: 'Neuschnee in Chestehouz: Schanze geschaufelt, Wiese befahren.' },
+  {
+    year: 'Jan. 2026',
+    text: 'Neuschnee in Chestehouz: Schanze geschaufelt, halber Skilift eröffnet.',
+  },
   { year: '2026', text: '3. GV im Pöstli, Kappel – alle einstimmig wiedergewählt. Bravo!' },
   { year: '2027', text: 'Premiere: der erste öffentliche Chestehouzer Skitag.' },
 ]
