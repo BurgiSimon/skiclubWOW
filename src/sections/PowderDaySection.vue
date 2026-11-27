@@ -27,7 +27,7 @@ const facts = [
 const liftSpecs = [
   ['Typ', 'Kofferraumlift'],
   ['Antrieb', '1 Peugeot'],
-  ['Förderleistung', '2 Personen pro Fahrt'],
+  ['Förderleistung', '4 Personen pro Fahrt'],
   ['Wartezeit', '0 Minuten'],
   ['Betrieb', 'Nur bei Neuschnee'],
   ['Tarif', 'Gratis'],
@@ -130,8 +130,8 @@ const liftSpecs = [
         </p>
         <h3 id="lift-title" class="lift__title">Halber Skilift</h3>
         <p class="lift__lead">
-          Kein Lift im Dorf? Dann bauen wir uns einen – zumindest einen halben. Zwei Kollegen samt
-          Ski in den Kofferraum, Klappe offen lassen, fertig.
+          Kein Lift im Dorf? Dann bauen wir uns einen – zumindest einen halben. Kollegen samt Ski in
+          den Kofferraum, Klappe offen lassen, fertig.
         </p>
         <dl class="lift__specs">
           <div v-for="[term, value] in liftSpecs" :key="term">
