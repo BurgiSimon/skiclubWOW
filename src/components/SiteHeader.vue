@@ -3,12 +3,12 @@ import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import BootIcon from './brand/BootIcon.vue'
 import BrandWordmark from './brand/BrandWordmark.vue'
 import AppIcon from './AppIcon.vue'
-import { navLinks } from '@/data/club.js'
+import { club, instagramUrl, navLinks } from '@/data/club.js'
+import { useSnowCannon, useToast } from '@/composables/useUi.js'
+import { useReducedMotion } from '@/composables/useReducedMotion.js'
 
 // The red CTA already covers «Mitmachen» on desktop
 const desktopLinks = navLinks.filter((link) => link.id !== 'mitmachen')
-import { useSnowCannon, useToast } from '@/composables/useUi.js'
-import { useReducedMotion } from '@/composables/useReducedMotion.js'
 
 const scrolled = ref(false)
 const progress = ref(0)
@@ -135,6 +135,17 @@ onBeforeUnmount(() => {
           <AppIcon name="snowflake" />
           <span class="visually-hidden">Schneekanone</span>
         </button>
+        <a
+          v-if="instagramUrl"
+          class="icon-btn header__insta"
+          :href="instagramUrl"
+          target="_blank"
+          rel="noopener"
+          :title="`Instagram @${club.contact.instagram}`"
+        >
+          <AppIcon name="instagram" />
+          <span class="visually-hidden">Instagram @{{ club.contact.instagram }}</span>
+        </a>
         <a class="btn btn--red btn--sm header__cta" href="#mitmachen">Mitmachen</a>
         <button
           ref="toggleRef"
@@ -173,7 +184,18 @@ onBeforeUnmount(() => {
             </li>
           </ol>
         </nav>
-        <p class="mobile-menu__foot hand">Mer gseh üs uf de Pischte!</p>
+        <div class="mobile-menu__foot">
+          <a
+            v-if="instagramUrl"
+            class="mobile-menu__insta"
+            :href="instagramUrl"
+            target="_blank"
+            rel="noopener"
+          >
+            <AppIcon name="instagram" /> @{{ club.contact.instagram }}
+          </a>
+          <p class="mobile-menu__claim hand">Mer gseh üs uf de Pischte!</p>
+        </div>
       </div>
     </Transition>
   </Teleport>
@@ -291,10 +313,15 @@ onBeforeUnmount(() => {
   background: rgb(255 255 255 / 0.1);
 }
 
-.snow-toggle .app-icon {
+.snow-toggle .app-icon,
+.header__insta .app-icon {
   width: 22px;
   height: 22px;
   transition: transform 0.6s var(--ease-out);
+}
+
+.header__insta:hover .app-icon {
+  transform: rotate(-8deg) scale(1.08);
 }
 
 .snow-toggle:hover .app-icon {
@@ -477,7 +504,30 @@ onBeforeUnmount(() => {
   animation-delay: calc(80ms + var(--i) * 50ms);
 }
 
+@media (max-width: 379px) {
+  .header__insta {
+    display: none;
+  }
+}
+
 .mobile-menu__foot {
+  display: grid;
+  gap: 1.25rem;
+  justify-items: start;
+}
+
+.mobile-menu__insta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.7rem 1.1rem;
+  border: 1px solid rgb(255 255 255 / 0.25);
+  border-radius: 999px;
+  font-weight: 650;
+  text-decoration: none;
+}
+
+.mobile-menu__claim {
   font-size: 1.9rem;
   color: var(--c-muted-on-dark);
   transform: rotate(-3deg);

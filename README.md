@@ -41,12 +41,14 @@ All texts and dates live in three small files – no component code needs to cha
 
 | File | What |
 | --- | --- |
-| `src/data/club.js` | Club facts (members, founded …), **contact e-mail / Instagram**, chronicle, polaroid captions |
+| `src/data/club.js` | Club facts (members, founded …), **contact e-mail / Instagram** (`skiclub_kestenholz`), chronicle, polaroid captions |
 | `src/data/events.js` | The agenda. Dates are `YYYY-MM-DD`; past events get an «Entwertet» stamp automatically and the hero always shows the next one |
 | `src/data/photos.js` | The gallery (file, category, alt text, caption) |
 
-**Contact:** as long as `contact.email` is empty, the «Mitmachen» buttons point to the agenda
-(«talk to us at the next event»). Add the club address there and they become `mailto:` links.
+**Contact:** the «Mitmachen» buttons use the first channel that is set in `contact`: e-mail
+(`mailto:` with a prefilled subject), then Instagram (opens the profile for a DM), otherwise the
+agenda («talk to us at the next event»). The Instagram handle also drives the header icon, the
+mobile menu, the «more on Instagram» box below the gallery and the footer.
 
 **Adding a photo:** put the `.jpg` into `src/assets/photos/` and add an entry to `gallery` in
 `src/data/photos.js`. At build time [vite-imagetools](https://github.com/JonasKruckenberg/imagetools)

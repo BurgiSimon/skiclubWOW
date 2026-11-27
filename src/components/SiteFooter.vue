@@ -2,7 +2,7 @@
 import AppIcon from './AppIcon.vue'
 import BootIcon from './brand/BootIcon.vue'
 import BrandWordmark from './brand/BrandWordmark.vue'
-import { club, navLinks } from '@/data/club.js'
+import { club, instagramUrl, navLinks } from '@/data/club.js'
 
 const year = new Date().getFullYear()
 
@@ -48,14 +48,10 @@ function abfahrt() {
               <AppIcon name="mail" /> {{ club.contact.email }}
             </a>
           </p>
+          <p v-else-if="instagramUrl">Am schnellsten per Direktnachricht auf Instagram:</p>
           <p v-else>Kontaktadresse folgt. Bis dahin findest du uns an jedem Anlass.</p>
-          <p v-if="club.contact.instagram">
-            <a
-              :href="`https://www.instagram.com/${club.contact.instagram}/`"
-              class="footer__icon-link"
-              rel="noopener"
-              target="_blank"
-            >
+          <p v-if="instagramUrl" class="footer__insta">
+            <a :href="instagramUrl" class="footer__icon-link" rel="noopener" target="_blank">
               <AppIcon name="instagram" /> @{{ club.contact.instagram }}
             </a>
           </p>
@@ -167,6 +163,12 @@ function abfahrt() {
   display: inline-flex;
   align-items: center;
   gap: 0.45rem;
+}
+
+.footer__insta {
+  margin-top: 0.5rem;
+  font-weight: 650;
+  color: #fff;
 }
 
 .footer__quote {

@@ -1,8 +1,9 @@
 <script setup>
 import AppIcon from '@/components/AppIcon.vue'
-import { club, contactHref } from '@/data/club.js'
+import { club, contactLink, instagramUrl } from '@/data/club.js'
 
 const hasEmail = Boolean(club.contact.email)
+const LINK_ICONS = { mail: 'mail', instagram: 'instagram', agenda: 'arrow-right' }
 
 const options = [
   {
@@ -44,7 +45,7 @@ const options = [
     fallbackCta: 'Lass uns am Anlass reden',
     subject: 'Sponsoring Skiclub Kestenholz',
   },
-]
+].map((option) => ({ ...option, link: contactLink(option.subject) }))
 </script>
 
 <template>
@@ -77,9 +78,12 @@ const options = [
               <span>{{ perk }}</span>
             </li>
           </ul>
-          <a class="btn join-card__cta" :href="contactHref(option.subject)">
-            {{ hasEmail ? option.cta : option.fallbackCta }}
-            <AppIcon :name="hasEmail ? 'mail' : 'arrow-right'" />
+          <a class="btn join-card__cta" :href="option.link.href" v-bind="option.link.attrs">
+            {{ option.link.kind === 'agenda' ? option.fallbackCta : option.cta }}
+            <AppIcon :name="LINK_ICONS[option.link.kind]" />
+            <span v-if="option.link.kind === 'instagram'" class="visually-hidden">
+              (Instagram, öffnet in neuem Tab)
+            </span>
           </a>
         </article>
       </div>
@@ -88,6 +92,12 @@ const options = [
         <p v-if="hasEmail" class="join__contact">
           Lieber direkt? Schreib uns:
           <a :href="`mailto:${club.contact.email}`">{{ club.contact.email }}</a>
+        </p>
+        <p v-else-if="instagramUrl" class="join__contact">
+          Am schnellsten per Direktnachricht auf Instagram:
+          <a :href="instagramUrl" target="_blank" rel="noopener">@{{ club.contact.instagram }}</a>
+          – oder persönlich an der Skiclub-Bar, am Paradislifest oder am Jass. Wir sind die mit den
+          Fleecejacken.
         </p>
         <p v-else class="join__contact">
           Die Kontaktadresse folgt. Bis dahin: Sprich uns an der Skiclub-Bar, am Paradislifest oder
