@@ -1,5 +1,7 @@
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
+// Infinite marquee whose speed (and direction) follows the scroll velocity.
+import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { useReducedMotion } from '@/composables/useReducedMotion.js'
 import './ScrollVelocity.css'
 
 const props = defineProps({
@@ -19,116 +21,132 @@ const props = defineProps({
   scrollerStyle: { type: Object, default: () => ({}) },
 })
 
+const rootRef = ref(null)
 const scrollerRef = ref(null)
-const copyRef = ref(null)
+const reducedMotion = useReducedMotion()
 
+let firstCopy = null
+let copyWidth = 0
 let baseX = 0
 let directionFactor = 1
 let scrollVelocity = 0
 let smoothVelocity = 0
 let lastScrollY = 0
-let lastTime = 0
-let animationId = null
-let copyWidth = 0
+let lastScrollTime = 0
+let prevTimestamp = null
+let frame = 0
+let visible = false
+let resizeObserver = null
+let intersectionObserver = null
 
-function wrap(min, max, v) {
+function setFirstCopy(el) {
+  firstCopy = el
+}
+
+function wrap(min, max, value) {
   const range = max - min
-  const mod = (((v - min) % range) + range) % range
-  return mod + min
+  return ((((value - min) % range) + range) % range) + min
 }
 
 function mapRange(value, inMin, inMax, outMin, outMax) {
   const clamped = Math.max(inMin, Math.min(inMax, Math.abs(value)))
-  const normalized = (clamped - inMin) / (inMax - inMin)
-  const result = outMin + normalized * (outMax - outMin)
+  const result = outMin + ((clamped - inMin) / (inMax - inMin)) * (outMax - outMin)
   return value < 0 ? -result : result
 }
 
-function handleScroll() {
-  const now = performance.now()
-  const dt = now - lastTime
-  if (dt > 0) {
-    const container = props.scrollContainerRef?.value ?? null
-    const currentScrollY = container ? container.scrollTop : window.scrollY
-    scrollVelocity = ((currentScrollY - lastScrollY) / dt) * 1000
-    lastScrollY = currentScrollY
-    lastTime = now
-  }
+function scrollTarget() {
+  return props.scrollContainerRef?.value ?? window
 }
 
-function animate(timestamp, delta) {
-  if (!delta) delta = 16
-  // Spring-like smoothing
+function currentScrollY() {
+  const container = props.scrollContainerRef?.value
+  return container ? container.scrollTop : window.scrollY
+}
+
+function onScroll() {
+  const now = performance.now()
+  const dt = now - lastScrollTime
+  if (dt <= 0) return
+  const y = currentScrollY()
+  scrollVelocity = ((y - lastScrollY) / dt) * 1000
+  lastScrollY = y
+  lastScrollTime = now
+}
+
+function tick(timestamp) {
+  frame = requestAnimationFrame(tick)
+  const delta = prevTimestamp ? Math.min(timestamp - prevTimestamp, 64) : 16
+  prevTimestamp = timestamp
+  if (!visible || copyWidth <= 0) return
+
+  // No scroll event for a moment → the scroll velocity is zero again.
+  if (performance.now() - lastScrollTime > 80) scrollVelocity = 0
+
   const springForce = (scrollVelocity - smoothVelocity) * (props.stiffness / 10000)
   const dampingForce = smoothVelocity * (props.damping / 10000)
   smoothVelocity += (springForce - dampingForce) * (delta / 16)
 
-  const input = props.velocityMapping?.input || [0, 1000]
-  const output = props.velocityMapping?.output || [0, 5]
+  const { input = [0, 1000], output = [0, 5] } = props.velocityMapping ?? {}
   const velocityFactor = mapRange(smoothVelocity, input[0], input[1], output[0], output[1])
-
-  if (velocityFactor < 0) {
-    directionFactor = -1
-  } else if (velocityFactor > 0) {
-    directionFactor = 1
-  }
+  if (velocityFactor < 0) directionFactor = -1
+  else if (velocityFactor > 0) directionFactor = 1
 
   let moveBy = directionFactor * props.baseVelocity * (delta / 1000)
   moveBy += directionFactor * moveBy * velocityFactor
-
   baseX += moveBy
 
-  if (copyWidth > 0 && scrollerRef.value) {
-    const wrappedX = wrap(-copyWidth, 0, baseX)
-    scrollerRef.value.style.transform = `translateX(${wrappedX}px)`
-  }
+  scrollerRef.value.style.transform = `translate3d(${wrap(-copyWidth, 0, baseX)}px, 0, 0)`
 }
 
-let prevTimestamp = null
-function loop(timestamp) {
-  const delta = prevTimestamp ? timestamp - prevTimestamp : 16
-  prevTimestamp = timestamp
-  animate(timestamp, delta)
-  animationId = requestAnimationFrame(loop)
+function start() {
+  if (frame) return
+  prevTimestamp = null
+  frame = requestAnimationFrame(tick)
 }
 
-function updateWidth() {
-  if (copyRef.value) {
-    copyWidth = copyRef.value.offsetWidth
-  }
+function stop() {
+  cancelAnimationFrame(frame)
+  frame = 0
+  if (scrollerRef.value) scrollerRef.value.style.transform = ''
 }
 
 onMounted(() => {
-  const container = props.scrollContainerRef?.value ?? null
-  const scrollTarget = container || window
-  lastScrollY = container ? container.scrollTop : window.scrollY
-  lastTime = performance.now()
+  lastScrollY = currentScrollY()
+  lastScrollTime = performance.now()
+  scrollTarget().addEventListener('scroll', onScroll, { passive: true })
 
-  scrollTarget.addEventListener('scroll', handleScroll, { passive: true })
-  window.addEventListener('resize', updateWidth)
-  updateWidth()
-  animationId = requestAnimationFrame(loop)
+  resizeObserver = new ResizeObserver(() => {
+    copyWidth = firstCopy?.offsetWidth ?? 0
+  })
+  if (firstCopy) resizeObserver.observe(firstCopy)
+
+  intersectionObserver = new IntersectionObserver(([entry]) => {
+    visible = entry.isIntersecting
+  })
+  intersectionObserver.observe(rootRef.value)
+
+  if (!reducedMotion.value) start()
 })
 
-onUnmounted(() => {
-  const container = props.scrollContainerRef?.value ?? null
-  const scrollTarget = container || window
-  scrollTarget.removeEventListener('scroll', handleScroll)
-  window.removeEventListener('resize', updateWidth)
-  if (animationId) cancelAnimationFrame(animationId)
-})
+watch(reducedMotion, (reduced) => (reduced ? stop() : start()))
 
-const copies = Array.from({ length: props.numCopies }, (_, i) => i)
+onBeforeUnmount(() => {
+  stop()
+  scrollTarget().removeEventListener('scroll', onScroll)
+  resizeObserver?.disconnect()
+  intersectionObserver?.disconnect()
+})
 </script>
 
 <template>
-  <div :class="parallaxClassName" :style="parallaxStyle">
+  <div ref="rootRef" :class="parallaxClassName" :style="parallaxStyle">
     <div ref="scrollerRef" :class="scrollerClassName" :style="scrollerStyle">
       <span
-        v-for="i in copies"
+        v-for="i in numCopies"
         :key="i"
-        :ref="i === 0 ? (el) => (copyRef = el) : undefined"
+        :ref="i === 1 ? setFirstCopy : undefined"
         :class="className"
+        :aria-hidden="i > 1 ? 'true' : undefined"
       >
         <slot />&nbsp;
       </span>

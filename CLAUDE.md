@@ -21,10 +21,19 @@ bun format        # Format src/ with prettier
 
 ## Architecture
 
-This is a minimal Vue 3 SPA bootstrapped with `create-vue`. Currently just a scaffold:
+Single-page website of the Skiclub Kestenholz (German / Swiss German copy), deployed to GitHub
+Pages by `.github/workflows/deploy.yml`. No router, no store – sections with anchor navigation.
 
-- `src/main.js` — mounts the root `App` component onto `#app` (in `index.html`)
-- `src/App.vue` — root component; all app content starts here
+- `src/main.js` — mounts `App`, registers the `v-reveal` directive, imports fonts + `styles/main.css`
+- `src/App.vue` — header, the page sections, footer and global overlays (lightbox, toasts, snow, easter egg)
+- `src/sections/` — one component per page section (Hero, About, PowderDay, Founders, Events, Gallery, Join)
+- `src/components/` — shared UI (EventTicket, ResponsiveImage, AutoVideo, PixelSnow, VelocityText, …);
+  `components/brand/` holds the logo boot and traced wordmark as SVG paths
+- `src/data/` — all content: `club.js` (facts, contact), `events.js` (agenda), `photos.js` (gallery)
+- `src/composables/` — shared state (`useUi.js`: lightbox/toasts/snow), `useNow` (supports `?heute=YYYY-MM-DD`), reduced motion
+- `src/styles/main.css` — design tokens (colours, type, spacing), buttons, section scaffolding, reveal animation
+- Photos in `src/assets/photos/` are imported via `vite-imagetools` (`?…&as=picture`) → AVIF/WebP srcsets
+- `vite.config.js` uses `base: './'` so the build works under the GitHub Pages sub-path
 - `@` alias resolves to `src/` (configured in both `vite.config.js` and `jsconfig.json`)
 
 ## Linting

@@ -1,30 +1,42 @@
 <script setup>
-import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
-import {
-  Scene,
-  OrthographicCamera,
-  WebGLRenderer,
-  PlaneGeometry,
-  ShaderMaterial,
-  Mesh,
-  Vector2,
-  Vector3,
-  Color,
-} from 'three'
+// Pixel snow, rendered with plain WebGL2 (no three.js).
+// The canvas is drawn at "snow pixel" resolution and scaled up with `image-rendering: pixelated`,
+// so the ray-marching shader only runs once per visible snow pixel – cheap even on phones.
+import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { useReducedMotion } from '@/composables/useReducedMotion.js'
 import './PixelSnow.css'
 
-const vertexShader = `void main() {
-  gl_Position = vec4(position, 1.0);
+const props = defineProps({
+  color: { type: String, default: '#ffffff' },
+  flakeSize: { type: Number, default: 0.01 },
+  minFlakeSize: { type: Number, default: 1.25 },
+  /** Number of snow pixels across the full width */
+  pixelResolution: { type: Number, default: 200 },
+  speed: { type: Number, default: 1.25 },
+  depthFade: { type: Number, default: 8 },
+  farPlane: { type: Number, default: 20 },
+  brightness: { type: Number, default: 1 },
+  gamma: { type: Number, default: 0.4545 },
+  density: { type: Number, default: 0.3 },
+  variant: { type: String, default: 'square' },
+  direction: { type: Number, default: 125 },
+  className: { type: String, default: '' },
+})
+
+const vertexShader = `#version 300 es
+void main() {
+  vec2 p = vec2(float((gl_VertexID << 1) & 2), float(gl_VertexID & 2));
+  gl_Position = vec4(p * 2.0 - 1.0, 0.0, 1.0);
 }`
 
-const fragmentShader = `
-precision mediump float;
+const fragmentShader = `#version 300 es
+precision highp float;
+precision highp int;
 
 uniform float uTime;
 uniform vec2 uResolution;
 uniform float uFlakeSize;
 uniform float uMinFlakeSize;
-uniform float uPixelResolution;
 uniform float uSpeed;
 uniform float uDepthFade;
 uniform float uFarPlane;
@@ -35,10 +47,10 @@ uniform float uDensity;
 uniform float uVariant;
 uniform float uDirection;
 
-#define PI 3.14159265
+out vec4 fragColor;
+
 #define PI_OVER_6 0.5235988
 #define PI_OVER_3 1.0471976
-#define INV_SQRT3 0.57735027
 #define M1 1597334677U
 #define M2 3812015801U
 #define M3 3299493293U
@@ -50,7 +62,6 @@ uniform float uDirection;
 const vec3 camK = vec3(0.57735027, 0.57735027, 0.57735027);
 const vec3 camI = vec3(0.70710678, 0.0, -0.70710678);
 const vec3 camJ = vec3(-0.40824829, 0.81649658, -0.40824829);
-
 const vec2 b1d = vec2(0.574, 0.819);
 
 vec3 hash3(uint n) {
@@ -72,12 +83,9 @@ float snowflakeDist(vec2 p) {
 }
 
 void main() {
-  float invPixelRes = 1.0 / uPixelResolution;
-  float pixelSize = max(1.0, floor(0.5 + uResolution.x * invPixelRes));
-  float invPixelSize = 1.0 / pixelSize;
-
-  vec2 fragCoord = floor(gl_FragCoord.xy * invPixelSize);
-  vec2 res = uResolution * invPixelSize;
+  // One fragment == one snow pixel (the canvas is rendered at snow-pixel resolution).
+  vec2 fragCoord = floor(gl_FragCoord.xy);
+  vec2 res = uResolution;
   float invResX = 1.0 / res.x;
 
   vec3 ray = normalize(vec3((fragCoord - res * 0.5) * invResX, 1.0));
@@ -111,14 +119,12 @@ void main() {
 
     if (cellHash < uDensity) {
       vec3 h = hash3(cellCoord);
-
       vec3 sinArg1 = fpos.yzx * 0.073;
       vec3 sinArg2 = fpos.zxy * 0.27;
       vec3 flakePos = 0.5 - 0.5 * cos(4.0 * sin(sinArg1) + 4.0 * sin(sinArg2) + 2.0 * h + timeAnim);
       flakePos = flakePos * 0.8 + 0.1 + fpos;
 
       float toIntersection = dot(flakePos - pos, camK) * invRayDotCamK;
-
       if (toIntersection > 0.0) {
         vec3 testPos = pos + ray * toIntersection - flakePos;
         float testX = dot(testPos, camI);
@@ -141,8 +147,8 @@ void main() {
         if (dist < flakeSize) {
           float flakeSizeRatio = uFlakeSize / flakeSize;
           float intensity = exp2(-(t + toIntersection) * invDepthFade) *
-                           min(1.0, flakeSizeRatio * flakeSizeRatio) * uBrightness;
-          gl_FragColor = vec4(uColor * pow(vec3(intensity), vec3(uGamma)), 1.0);
+                            min(1.0, flakeSizeRatio * flakeSizeRatio) * uBrightness;
+          fragColor = vec4(uColor * pow(vec3(intensity), vec3(uGamma)), 1.0);
           return;
         }
       }
@@ -155,182 +161,210 @@ void main() {
     pos = mix(pos + ray * nextStep, floor(pos + ray * nextStep + 0.5), sel);
   }
 
-  gl_FragColor = vec4(0.0);
-}
-`
-
-const props = defineProps({
-  color: { type: String, default: '#ffffff' },
-  flakeSize: { type: Number, default: 0.01 },
-  minFlakeSize: { type: Number, default: 1.25 },
-  pixelResolution: { type: Number, default: 200 },
-  speed: { type: Number, default: 1.25 },
-  depthFade: { type: Number, default: 8 },
-  farPlane: { type: Number, default: 20 },
-  brightness: { type: Number, default: 1 },
-  gamma: { type: Number, default: 0.4545 },
-  density: { type: Number, default: 0.3 },
-  variant: { type: String, default: 'square' },
-  direction: { type: Number, default: 125 },
-  className: { type: String, default: '' },
-})
+  fragColor = vec4(0.0);
+}`
 
 const containerRef = ref(null)
+const canvasRef = ref(null)
+const reducedMotion = useReducedMotion()
 
-let animationId = 0
-let isVisible = true
-let renderer = null
-let material = null
-let geometry = null
-let resizeTimeout = null
+let gl = null
+let program = null
+let uniforms = {}
+let frame = 0
+let running = false
+let visible = true
+let startTime = 0
+let resizeObserver = null
+let intersectionObserver = null
 
-const variantValue = computed(() => {
-  return props.variant === 'round' ? 1.0 : props.variant === 'snowflake' ? 2.0 : 0.0
-})
-
-const colorVector = computed(() => {
-  const threeColor = new Color(props.color)
-  return new Vector3(threeColor.r, threeColor.g, threeColor.b)
-})
-
-function handleResize() {
-  if (resizeTimeout) clearTimeout(resizeTimeout)
-  resizeTimeout = setTimeout(() => {
-    const container = containerRef.value
-    if (!container || !renderer || !material) return
-    const w = container.offsetWidth
-    const h = container.offsetHeight
-    renderer.setSize(w, h)
-    material.uniforms.uResolution.value.set(w, h)
-  }, 100)
+function hexToRgb(hex) {
+  const value = hex.replace('#', '')
+  const full =
+    value.length === 3
+      ? value
+          .split('')
+          .map((c) => c + c)
+          .join('')
+      : value
+  const int = parseInt(full, 16)
+  return [((int >> 16) & 255) / 255, ((int >> 8) & 255) / 255, (int & 255) / 255]
 }
 
-// Watch props to update uniforms reactively
-watch(
-  () => [
-    props.flakeSize,
-    props.minFlakeSize,
-    props.pixelResolution,
-    props.speed,
-    props.depthFade,
-    props.farPlane,
-    props.brightness,
-    props.gamma,
-    props.density,
-    variantValue.value,
-    props.direction,
-    colorVector.value,
-  ],
-  () => {
-    if (!material) return
-    material.uniforms.uFlakeSize.value = props.flakeSize
-    material.uniforms.uMinFlakeSize.value = props.minFlakeSize
-    material.uniforms.uPixelResolution.value = props.pixelResolution
-    material.uniforms.uSpeed.value = props.speed
-    material.uniforms.uDepthFade.value = props.depthFade
-    material.uniforms.uFarPlane.value = props.farPlane
-    material.uniforms.uBrightness.value = props.brightness
-    material.uniforms.uGamma.value = props.gamma
-    material.uniforms.uDensity.value = props.density
-    material.uniforms.uVariant.value = variantValue.value
-    material.uniforms.uDirection.value = (props.direction * Math.PI) / 180
-    material.uniforms.uColor.value.copy(colorVector.value)
-  },
-)
+function compile(type, source) {
+  const shader = gl.createShader(type)
+  gl.shaderSource(shader, source)
+  gl.compileShader(shader)
+  if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+    console.warn('PixelSnow shader error:', gl.getShaderInfoLog(shader))
+    gl.deleteShader(shader)
+    return null
+  }
+  return shader
+}
+
+function init() {
+  const canvas = canvasRef.value
+  gl = canvas.getContext('webgl2', {
+    alpha: true,
+    antialias: false,
+    depth: false,
+    stencil: false,
+    premultipliedAlpha: true,
+    powerPreference: 'low-power',
+  })
+  if (!gl) return false
+
+  const vs = compile(gl.VERTEX_SHADER, vertexShader)
+  const fs = compile(gl.FRAGMENT_SHADER, fragmentShader)
+  if (!vs || !fs) return false
+
+  program = gl.createProgram()
+  gl.attachShader(program, vs)
+  gl.attachShader(program, fs)
+  gl.linkProgram(program)
+  gl.deleteShader(vs)
+  gl.deleteShader(fs)
+  if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+    console.warn('PixelSnow link error:', gl.getProgramInfoLog(program))
+    return false
+  }
+
+  gl.useProgram(program)
+  const names = [
+    'uTime',
+    'uResolution',
+    'uFlakeSize',
+    'uMinFlakeSize',
+    'uSpeed',
+    'uDepthFade',
+    'uFarPlane',
+    'uColor',
+    'uBrightness',
+    'uGamma',
+    'uDensity',
+    'uVariant',
+    'uDirection',
+  ]
+  uniforms = Object.fromEntries(names.map((n) => [n, gl.getUniformLocation(program, n)]))
+  gl.clearColor(0, 0, 0, 0)
+  return true
+}
+
+function resize() {
+  const container = containerRef.value
+  const canvas = canvasRef.value
+  if (!container || !canvas || !gl) return
+  const cssWidth = Math.max(1, container.clientWidth)
+  const cssHeight = Math.max(1, container.clientHeight)
+  // Integer CSS size per snow pixel keeps the upscaled pixels crisp and uniform.
+  const pixelSize = Math.max(1, Math.round(cssWidth / props.pixelResolution))
+  canvas.width = Math.ceil(cssWidth / pixelSize)
+  canvas.height = Math.ceil(cssHeight / pixelSize)
+  canvas.style.width = `${canvas.width * pixelSize}px`
+  canvas.style.height = `${canvas.height * pixelSize}px`
+  gl.viewport(0, 0, canvas.width, canvas.height)
+  if (!running) draw(0)
+}
+
+function draw(time) {
+  if (!gl || !program) return
+  const variant = props.variant === 'round' ? 1 : props.variant === 'snowflake' ? 2 : 0
+  gl.uniform1f(uniforms.uTime, time)
+  gl.uniform2f(uniforms.uResolution, gl.drawingBufferWidth, gl.drawingBufferHeight)
+  gl.uniform1f(uniforms.uFlakeSize, props.flakeSize)
+  gl.uniform1f(uniforms.uMinFlakeSize, props.minFlakeSize)
+  gl.uniform1f(uniforms.uSpeed, props.speed)
+  gl.uniform1f(uniforms.uDepthFade, props.depthFade)
+  gl.uniform1f(uniforms.uFarPlane, props.farPlane)
+  gl.uniform3fv(uniforms.uColor, hexToRgb(props.color))
+  gl.uniform1f(uniforms.uBrightness, props.brightness)
+  gl.uniform1f(uniforms.uGamma, props.gamma)
+  gl.uniform1f(uniforms.uDensity, props.density)
+  gl.uniform1f(uniforms.uVariant, variant)
+  gl.uniform1f(uniforms.uDirection, (props.direction * Math.PI) / 180)
+  gl.clear(gl.COLOR_BUFFER_BIT)
+  gl.drawArrays(gl.TRIANGLES, 0, 3)
+}
+
+function loop(now) {
+  frame = requestAnimationFrame(loop)
+  if (!visible || document.hidden) return
+  draw((now - startTime) / 1000)
+}
+
+function start() {
+  if (running || !gl) return
+  running = true
+  startTime = performance.now() - 8000 // start mid-fall so the screen is not empty
+  frame = requestAnimationFrame(loop)
+}
+
+function stop() {
+  running = false
+  cancelAnimationFrame(frame)
+}
+
+function onContextLost(event) {
+  event.preventDefault()
+  stop()
+}
+
+function onContextRestored() {
+  if (init()) {
+    resize()
+    if (!reducedMotion.value) start()
+  }
+}
 
 onMounted(() => {
-  const container = containerRef.value
-  if (!container) return
+  if (!init()) return
+  const canvas = canvasRef.value
+  canvas.addEventListener('webglcontextlost', onContextLost)
+  canvas.addEventListener('webglcontextrestored', onContextRestored)
 
-  // Visibility observer
-  const observer = new IntersectionObserver(
-    ([entry]) => {
-      isVisible = entry.isIntersecting
-    },
-    { threshold: 0 },
-  )
-  observer.observe(container)
-
-  // Three.js setup
-  const scene = new Scene()
-  const camera = new OrthographicCamera(-1, 1, 1, -1, 0, 1)
-  renderer = new WebGLRenderer({
-    antialias: false,
-    alpha: true,
-    premultipliedAlpha: false,
-    powerPreference: 'high-performance',
-    stencil: false,
-    depth: false,
+  resizeObserver = new ResizeObserver(resize)
+  resizeObserver.observe(containerRef.value)
+  intersectionObserver = new IntersectionObserver(([entry]) => {
+    visible = entry.isIntersecting
   })
+  intersectionObserver.observe(containerRef.value)
 
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
-  renderer.setSize(container.offsetWidth, container.offsetHeight)
-  renderer.setClearColor(0x000000, 0)
-  container.appendChild(renderer.domElement)
-
-  material = new ShaderMaterial({
-    vertexShader,
-    fragmentShader,
-    uniforms: {
-      uTime: { value: 0 },
-      uResolution: { value: new Vector2(container.offsetWidth, container.offsetHeight) },
-      uFlakeSize: { value: props.flakeSize },
-      uMinFlakeSize: { value: props.minFlakeSize },
-      uPixelResolution: { value: props.pixelResolution },
-      uSpeed: { value: props.speed },
-      uDepthFade: { value: props.depthFade },
-      uFarPlane: { value: props.farPlane },
-      uColor: { value: colorVector.value.clone() },
-      uBrightness: { value: props.brightness },
-      uGamma: { value: props.gamma },
-      uDensity: { value: props.density },
-      uVariant: { value: variantValue.value },
-      uDirection: { value: (props.direction * Math.PI) / 180 },
-    },
-    transparent: true,
-  })
-
-  geometry = new PlaneGeometry(2, 2)
-  scene.add(new Mesh(geometry, material))
-
-  window.addEventListener('resize', handleResize)
-
-  const startTime = performance.now()
-  const animate = () => {
-    animationId = requestAnimationFrame(animate)
-    if (isVisible) {
-      material.uniforms.uTime.value = (performance.now() - startTime) * 0.001
-      renderer.render(scene, camera)
-    }
-  }
-  animate()
-
-  // Store observer for cleanup
-  container._snowObserver = observer
+  resize()
+  if (reducedMotion.value) draw(12)
+  else start()
 })
 
-onUnmounted(() => {
-  cancelAnimationFrame(animationId)
-  window.removeEventListener('resize', handleResize)
-  if (resizeTimeout) clearTimeout(resizeTimeout)
-
-  const container = containerRef.value
-  if (container) {
-    container._snowObserver?.disconnect()
-    if (renderer && container.contains(renderer.domElement)) {
-      container.removeChild(renderer.domElement)
-    }
+watch(reducedMotion, (reduced) => {
+  if (reduced) {
+    stop()
+    draw(12)
+  } else {
+    start()
   }
+})
 
-  if (renderer) renderer.dispose()
-  if (geometry) geometry.dispose()
-  if (material) material.dispose()
-  renderer = null
-  material = null
-  geometry = null
+watch(
+  () => props.pixelResolution,
+  () => resize(),
+)
+
+onBeforeUnmount(() => {
+  stop()
+  resizeObserver?.disconnect()
+  intersectionObserver?.disconnect()
+  const canvas = canvasRef.value
+  canvas?.removeEventListener('webglcontextlost', onContextLost)
+  canvas?.removeEventListener('webglcontextrestored', onContextRestored)
+  if (gl && program) gl.deleteProgram(program)
+  gl?.getExtension('WEBGL_lose_context')?.loseContext()
+  gl = null
+  program = null
 })
 </script>
 
 <template>
-  <div ref="containerRef" :class="['pixel-snow-container', className]" />
+  <div ref="containerRef" :class="['pixel-snow-container', className]" aria-hidden="true">
+    <canvas ref="canvasRef" />
+  </div>
 </template>

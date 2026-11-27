@@ -1,12 +1,14 @@
 <script setup>
-import { ref, computed, onMounted, onUnmounted, useSlots } from 'vue'
-import { gsap } from 'gsap'
-import { ScrollTrigger } from 'gsap/ScrollTrigger'
+// Words fade in (and un-blur) while the text scrolls through the viewport.
+// GSAP is loaded lazily so it does not block the first paint.
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { useReducedMotion } from '@/composables/useReducedMotion.js'
 import './ScrollReveal.css'
 
-gsap.registerPlugin(ScrollTrigger)
-
 const props = defineProps({
+  text: { type: String, required: true },
+  /** Wrapper element, e.g. 'h2', 'p' or 'blockquote' */
+  as: { type: String, default: 'div' },
   scrollContainerRef: { type: Object, default: null },
   enableBlur: { type: Boolean, default: true },
   baseOpacity: { type: Number, default: 0.1 },
@@ -18,105 +20,71 @@ const props = defineProps({
   wordAnimationEnd: { type: String, default: 'bottom bottom' },
 })
 
-const slots = useSlots()
 const containerRef = ref(null)
-let triggers = []
+const reducedMotion = useReducedMotion()
+let context = null
+let disposed = false
 
-const words = computed(() => {
-  const slotContent = slots.default?.()
-  if (!slotContent || !slotContent.length) return []
-  const text = slotContent
-    .map((vnode) => {
-      if (typeof vnode.children === 'string') return vnode.children
-      return ''
-    })
-    .join('')
-  // Split by whitespace, preserving spaces as separate entries
-  return text.split(/(\s+)/).map((segment, index) => ({
-    text: segment,
-    isSpace: /^\s+$/.test(segment),
-    key: index,
-  }))
-})
+const segments = computed(() =>
+  props.text.split(/(\s+)/).map((text, key) => ({ text, key, isSpace: /^\s+$/.test(text) })),
+)
 
-onMounted(() => {
+onMounted(async () => {
+  if (reducedMotion.value) return
+  const [{ gsap }, { ScrollTrigger }] = await Promise.all([
+    import('gsap'),
+    import('gsap/ScrollTrigger'),
+  ])
   const el = containerRef.value
-  if (!el) return
+  if (disposed || !el) return
+  gsap.registerPlugin(ScrollTrigger)
 
-  const scroller =
-    props.scrollContainerRef && props.scrollContainerRef.value
-      ? props.scrollContainerRef.value
-      : window
+  const scroller = props.scrollContainerRef?.value ?? window
+  const trigger = { trigger: el, scroller, scrub: true }
 
-  gsap.fromTo(
-    el,
-    { transformOrigin: '0% 50%', rotate: props.baseRotation },
-    {
-      ease: 'none',
-      rotate: 0,
-      scrollTrigger: {
-        trigger: el,
-        scroller,
-        start: 'top bottom',
-        end: props.rotationEnd,
-        scrub: true,
-      },
-    },
-  )
-
-  const wordElements = el.querySelectorAll('.word')
-
-  gsap.fromTo(
-    wordElements,
-    { opacity: props.baseOpacity, willChange: 'opacity' },
-    {
-      ease: 'none',
-      opacity: 1,
-      stagger: 0.05,
-      scrollTrigger: {
-        trigger: el,
-        scroller,
-        start: 'top bottom-=20%',
-        end: props.wordAnimationEnd,
-        scrub: true,
-      },
-    },
-  )
-
-  if (props.enableBlur) {
+  context = gsap.context(() => {
     gsap.fromTo(
-      wordElements,
-      { filter: `blur(${props.blurStrength}px)` },
+      el,
+      { transformOrigin: '0% 50%', rotate: props.baseRotation },
       {
         ease: 'none',
-        filter: 'blur(0px)',
-        stagger: 0.05,
-        scrollTrigger: {
-          trigger: el,
-          scroller,
-          start: 'top bottom-=20%',
-          end: props.wordAnimationEnd,
-          scrub: true,
-        },
+        rotate: 0,
+        scrollTrigger: { ...trigger, start: 'top bottom', end: props.rotationEnd },
       },
     )
-  }
 
-  triggers = ScrollTrigger.getAll().filter((t) => t.trigger === el)
+    const words = el.querySelectorAll('.sr-word')
+    const wordTrigger = { ...trigger, start: 'top bottom-=20%', end: props.wordAnimationEnd }
+
+    gsap.fromTo(
+      words,
+      { opacity: props.baseOpacity, willChange: 'opacity' },
+      { ease: 'none', opacity: 1, stagger: 0.05, scrollTrigger: wordTrigger },
+    )
+
+    if (props.enableBlur) {
+      gsap.fromTo(
+        words,
+        { filter: `blur(${props.blurStrength}px)` },
+        { ease: 'none', filter: 'blur(0px)', stagger: 0.05, scrollTrigger: wordTrigger },
+      )
+    }
+  }, el)
 })
 
-onUnmounted(() => {
-  triggers.forEach((t) => t.kill())
+onBeforeUnmount(() => {
+  disposed = true
+  context?.revert()
 })
 </script>
 
 <template>
-  <h2 ref="containerRef" :class="['scroll-reveal', containerClassName]">
-    <p :class="['scroll-reveal-text', textClassName]">
-      <template v-for="segment in words" :key="segment.key">
-        <span v-if="!segment.isSpace" class="word">{{ segment.text }}</span>
+  <component :is="as" ref="containerRef" :class="['scroll-reveal', containerClassName]">
+    <span :class="['scroll-reveal-text', textClassName]">
+      <template v-for="segment in segments" :key="segment.key">
+        <span v-if="!segment.isSpace" class="sr-word">{{ segment.text }}</span>
         <template v-else>{{ segment.text }}</template>
       </template>
-    </p>
-  </h2>
+    </span>
+  </component>
 </template>
