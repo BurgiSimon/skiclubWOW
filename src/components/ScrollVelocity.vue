@@ -2,7 +2,7 @@
 import VelocityText from './VelocityText.vue'
 import './ScrollVelocity.css'
 
-const props = defineProps({
+defineProps({
   scrollContainerRef: { type: Object, default: null },
   texts: { type: Array, default: () => [] },
   velocity: { type: Number, default: 100 },
